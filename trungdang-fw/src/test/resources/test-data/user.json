@@ -1,0 +1,10 @@
+{
+  "validUser": {
+    "username": "trung.dang@agest.vn",
+    "password": "passpass"
+  },
+  "invalidUser": {
+    "username": "invalid_user",
+    "password": "invalid_password"
+  }
+}
