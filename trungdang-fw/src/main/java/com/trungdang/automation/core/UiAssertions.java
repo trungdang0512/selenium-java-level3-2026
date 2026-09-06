@@ -10,44 +10,43 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 /**
- * Assertion helpers that retry in three five-second wait windows.
+ * Assertion helpers that wait for UI conditions before failing.
  */
 public class UiAssertions {
 
-    private static final int MAX_ATTEMPTS = 3;
     private static final long RETRY_WAIT_SECONDS = 5;
 
     private UiAssertions() {
     }
 
     /** Waits until the element is visible. */
-    public static void assertDisplayed(By locator) {
-        By checkedLocator = requireLocator(locator);
-        retryUntil(
-                ExpectedConditions.visibilityOfElementLocated(checkedLocator),
-                "Expected element to be displayed: " + checkedLocator
+    public static void assertDisplayed(UiElement element) {
+        By locator = requireElement(element).getLocator();
+        waitUntil(
+                ExpectedConditions.visibilityOfElementLocated(locator),
+                "Expected element to be displayed: " + locator
         );
     }
 
     /** Waits until the element text exactly matches the expected text. */
-    public static void assertTextEquals(By locator, String expectedText) {
-        By checkedLocator = requireLocator(locator);
+    public static void assertTextEquals(UiElement element, String expectedText) {
+        By locator = requireElement(element).getLocator();
         String checkedText = Objects.requireNonNull(expectedText, "Expected text must not be null.");
 
-        retryUntil(
-                ExpectedConditions.textToBe(checkedLocator, checkedText),
-                "Expected element " + checkedLocator + " to have text: " + checkedText
+        waitUntil(
+                ExpectedConditions.textToBe(locator, checkedText),
+                "Expected element " + locator + " to have text: " + checkedText
         );
     }
 
     /** Waits until the element text contains the expected text. */
-    public static void assertTextContains(By locator, String expectedText) {
-        By checkedLocator = requireLocator(locator);
+    public static void assertTextContains(UiElement element, String expectedText) {
+        By locator = requireElement(element).getLocator();
         String checkedText = Objects.requireNonNull(expectedText, "Expected text must not be null.");
 
-        retryUntil(
-                ExpectedConditions.textToBePresentInElementLocated(checkedLocator, checkedText),
-                "Expected element " + checkedLocator + " to contain text: " + checkedText
+        waitUntil(
+                ExpectedConditions.textToBePresentInElementLocated(locator, checkedText),
+                "Expected element " + locator + " to contain text: " + checkedText
         );
     }
 
@@ -58,43 +57,37 @@ public class UiAssertions {
                 "Expected URL part must not be null."
         );
 
-        retryUntil(
+        waitUntil(
                 ExpectedConditions.urlContains(checkedUrlPart),
                 "Expected current URL to contain: " + checkedUrlPart
         );
     }
 
-    /** Retries one assertion condition up to the configured fixed attempt count. */
-    private static <T> void retryUntil(ExpectedCondition<T> condition, String failureMessage) {
-        TimeoutException lastTimeout = null;
-
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            try {
-                createAttemptWait().until(condition);
-                return;
-            } catch (TimeoutException exception) {
-                lastTimeout = exception;
-            }
-        }
-
-        AssertionError assertionError = new AssertionError(
-                failureMessage + ". Condition was not met after " + MAX_ATTEMPTS
-                        + " attempts of " + RETRY_WAIT_SECONDS + " seconds each."
-        );
-        assertionError.initCause(lastTimeout);
-        throw assertionError;
+    /** Rejects a missing UI element before Selenium starts waiting. */
+    private static UiElement requireElement(UiElement element) {
+        return Objects.requireNonNull(element, "UI element must not be null.");
     }
 
-    /** Creates one five-second wait window for an assertion attempt. */
-    private static WebDriverWait createAttemptWait() {
+    /** Waits once for an assertion condition and reports a clear assertion failure on timeout. */
+    private static <T> void waitUntil(ExpectedCondition<T> condition, String failureMessage) {
+        try {
+            createWait().until(condition);
+        } catch (TimeoutException exception) {
+            AssertionError assertionError = new AssertionError(
+                    failureMessage + ". Condition was not met within "
+                            + RETRY_WAIT_SECONDS + " seconds."
+            );
+            assertionError.initCause(exception);
+            throw assertionError;
+        }
+    }
+
+    /** Creates one wait using the configured assertion timeout. */
+    private static WebDriverWait createWait() {
         Duration timeout = Duration.ofSeconds(RETRY_WAIT_SECONDS);
         WebDriverWait wait = new WebDriverWait(DriverManager.getDriver(), timeout);
         wait.pollingEvery(Duration.ofMillis(200));
         return wait;
     }
 
-    /** Rejects a missing locator before Selenium starts waiting. */
-    private static By requireLocator(By locator) {
-        return Objects.requireNonNull(locator, "Locator must not be null.");
-    }
 }

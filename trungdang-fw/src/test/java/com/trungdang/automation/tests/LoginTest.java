@@ -1,5 +1,6 @@
 package com.trungdang.automation.tests;
 
+import com.trungdang.automation.core.UiAssertions;
 import com.trungdang.automation.model.User;
 import com.trungdang.automation.testdata.LoginDataProvider;
 import org.testng.Assert;
