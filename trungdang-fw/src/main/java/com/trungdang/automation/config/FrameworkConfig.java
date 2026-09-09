@@ -2,7 +2,7 @@ package com.trungdang.automation.config;
 
 import java.util.Objects;
 
-public final class FrameworkConfig {
+public class FrameworkConfig {
 
     private final BrowserType browser;
     private final boolean headless;

@@ -2,7 +2,7 @@
 
 A simple Selenium WebDriver framework for writing TestNG UI tests with Java.
 
-The framework currently runs tests on local Google Chrome. It manages browser configuration, driver creation, and driver cleanup so test classes can focus on test steps.
+The framework currently runs tests on local Google Chrome. It manages browser configuration, driver creation, driver cleanup, and JSON test-data loading so test classes can focus on test steps.
 
 ## Quick start
 
@@ -52,45 +52,24 @@ Create a TestNG class under:
 trungdang-fw/src/test/java/com/trungdang/automation/tests/
 ```
 
-Use `DriverManager` in the TestNG lifecycle:
+Extend `BaseTest` to reuse the framework's TestNG browser lifecycle:
 
 ```java
 package com.trungdang.automation.tests;
 
-import com.trungdang.automation.config.ConfigManager;
-import com.trungdang.automation.config.FrameworkConfig;
-import com.trungdang.automation.driver.DriverManager;
 import org.openqa.selenium.WebDriver;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-public class ExampleTest {
-
-    private DriverManager driverManager;
-
-    @BeforeMethod
-    public void setUp() {
-        FrameworkConfig config = ConfigManager.load();
-        driverManager = new DriverManager();
-        driverManager.start(config);
-    }
+public class ExampleTest extends BaseTest {
 
     @Test
     public void shouldOpenExamplePage() {
-        WebDriver driver = driverManager.getDriver();
+        WebDriver driver = getDriver();
 
         driver.get("https://example.com");
 
         Assert.assertEquals(driver.getTitle(), "Example Domain");
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void tearDown() {
-        if (driverManager != null) {
-            driverManager.quit();
-        }
     }
 }
 ```
@@ -103,13 +82,47 @@ mvn -Dtest=ExampleTest test
 
 ## Understand the test lifecycle
 
-The example follows three steps:
+Tests that extend `BaseTest` follow three steps:
 
-1. `ConfigManager.load()` reads the browser settings.
-2. `DriverManager.start(config)` creates the Chrome session before the test.
-3. `DriverManager.quit()` closes Chrome after the test, even when the test fails.
+1. `BaseTest.setUp()` loads the browser settings and creates Chrome before each test.
+2. The test calls `getDriver()` to use the active WebDriver.
+3. `BaseTest.tearDown()` closes Chrome after each test, even when the test fails.
 
-Always call `quit()` from an `@AfterMethod(alwaysRun = true)` method. This prevents unused Chrome processes from remaining on the computer.
+Extend `BaseTest` instead of repeating driver setup and cleanup in every test class.
+
+## Read JSON test data
+
+Test resources are stored under `trungdang-fw/src/test/resources/`. The smoke test reads its application URL from:
+
+```text
+src/test/resources/test-data/url.json
+```
+
+```json
+{
+  "loginUrl": "https://demo.testarchitect.com/"
+}
+```
+
+Read one JSON value by key:
+
+```java
+String loginUrl = TestDataReader.readByKey(
+        "test-data/url.json",
+        "loginUrl",
+        String.class
+);
+```
+
+Resource paths start inside `src/test/resources`; do not include that directory in the value passed to `TestDataReader`.
+
+Run the smoke test that opens this URL:
+
+```powershell
+mvn -Dheadless=true -Dtest=SmokeTest test
+```
+
+This test requires network access to `https://demo.testarchitect.com/`.
 
 ## Configure the browser
 
@@ -174,6 +187,14 @@ Do not call `start(config)` twice on the same `DriverManager` without calling `q
 
 Creates the Selenium WebDriver requested by `DriverManager`. Test classes normally do not need to call this class directly.
 
+### `BaseTest`
+
+Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()` inside test methods.
+
+### `TestDataReader`
+
+Reads JSON files from `src/test/resources`. Use `readByKey()` for one value or `read()` to map the entire JSON file to a Java class.
+
 ## Project structure
 
 ```text
@@ -190,8 +211,16 @@ selenium-java-level3-2026/
         |   `-- driver/
         |       |-- DriverManager.java
         |       `-- WebDriverFactory.java
-        `-- test/java/com/trungdang/automation/tests/
-            `-- DriverSmokeTest.java
+        `-- test/
+            |-- java/com/trungdang/automation/
+            |   |-- testdata/
+            |   |   |-- TestDataReader.java
+            |   |   `-- TestDataReaderTest.java
+            |   `-- tests/
+            |       |-- BaseTest.java
+            |       `-- SmokeTest.java
+            `-- resources/test-data/
+                `-- url.json
 ```
 
 ## Current browser support

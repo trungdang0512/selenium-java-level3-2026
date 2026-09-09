@@ -2,7 +2,7 @@ package com.trungdang.automation.config;
 
 import java.util.Locale;
 
-public final class ConfigManager {
+public class ConfigManager {
 
     private static final String BROWSER_PROPERTY = "browser";
     private static final String HEADLESS_PROPERTY = "headless";
