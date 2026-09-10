@@ -2,7 +2,7 @@
 
 A simple Selenium WebDriver framework for writing TestNG UI tests with Java.
 
-The framework currently runs tests on local Google Chrome. It manages browser configuration, driver creation, driver cleanup, and JSON test-data loading so test classes can focus on test steps.
+The framework currently runs tests on local Google Chrome. It manages browser configuration, lifecycle, and JSON test-data loading. It also provides waited element actions and retries UI assertions while the page is changing.
 
 ## Quick start
 
@@ -57,8 +57,10 @@ Extend `BaseTest` to reuse the framework's TestNG browser lifecycle:
 ```java
 package com.trungdang.automation.tests;
 
+import com.trungdang.automation.core.UiAssertions;
+import com.trungdang.automation.core.UiElement;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class ExampleTest extends BaseTest {
@@ -66,10 +68,13 @@ public class ExampleTest extends BaseTest {
     @Test
     public void shouldOpenExamplePage() {
         WebDriver driver = getDriver();
-
         driver.get("https://example.com");
 
-        Assert.assertEquals(driver.getTitle(), "Example Domain");
+        UiElement heading = new UiElement(driver, By.tagName("h1"));
+        UiAssertions assertions = new UiAssertions(driver);
+
+        assertions.assertVisible(heading);
+        assertions.assertTextEquals(heading, "Example Domain");
     }
 }
 ```
@@ -195,6 +200,49 @@ Provides the TestNG setup and teardown shared by UI tests. Extend it and call `g
 
 Reads JSON files from `src/test/resources`. Use `readByKey()` for one value or `read()` to map the entire JSON file to a Java class.
 
+### `UiElement`
+
+Stores a Selenium `By` locator and finds the element again when an action runs. This avoids keeping an old `WebElement` after the page changes.
+
+```java
+UiElement username = new UiElement(driver, By.id("username"));
+UiElement signInButton = new UiElement(driver, By.id("sign-in"));
+
+username.type("framework-user");
+signInButton.click();
+String buttonText = signInButton.getText();
+boolean buttonIsDisplayed = signInButton.isDisplayed();
+```
+
+`click()` waits for a displayed and enabled element. `type()` and `getText()` wait for a visible element. The default timeout is 10 seconds.
+
+### `UiAssertions`
+
+Retries an assertion until it passes or reaches the timeout:
+
+```java
+UiAssertions assertions = new UiAssertions(driver);
+
+assertions.assertVisible(signInButton);
+assertions.assertTextEquals(signInButton, "Sign in");
+```
+
+A failed assertion reports the locator, expected condition, timeout, and last observed text when available.
+
+### `WaitManager`
+
+Centralizes explicit waits and retries an element action when Selenium reports that the DOM replaced the element. Most tests use it indirectly through `UiElement`.
+
+Use a custom timeout when a page needs a different wait time:
+
+```java
+UiElement message = new UiElement(
+        driver,
+        By.id("message"),
+        Duration.ofSeconds(5)
+);
+```
+
 ## Project structure
 
 ```text
@@ -208,6 +256,10 @@ selenium-java-level3-2026/
         |   |   |-- BrowserType.java
         |   |   |-- ConfigManager.java
         |   |   `-- FrameworkConfig.java
+        |   |-- core/
+        |   |   |-- UiAssertions.java
+        |   |   |-- UiElement.java
+        |   |   `-- WaitManager.java
         |   `-- driver/
         |       |-- DriverManager.java
         |       `-- WebDriverFactory.java
