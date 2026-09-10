@@ -214,8 +214,7 @@ selenium-java-level3-2026/
         `-- test/
             |-- java/com/trungdang/automation/
             |   |-- testdata/
-            |   |   |-- TestDataReader.java
-            |   |   `-- TestDataReaderTest.java
+            |   |   `-- TestDataReader.java
             |   `-- tests/
             |       |-- BaseTest.java
             |       `-- SmokeTest.java
