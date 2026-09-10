@@ -6,6 +6,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
+/**
+ * Reads JSON test data from files available on the test classpath.
+ *
+ * <p>Resource paths are relative to {@code src/test/resources}. For example,
+ * {@code test-data/url.json} points to
+ * {@code src/test/resources/test-data/url.json}.
+ */
 public class TestDataReader {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -13,6 +20,14 @@ public class TestDataReader {
     private TestDataReader() {
     }
 
+    /**
+     * Reads a complete JSON resource and converts it to the requested Java type.
+     *
+     * @param <T> the type returned after JSON conversion
+     * @param resourcePath the resource path relative to {@code src/test/resources}
+     * @param dataType the Java type used for JSON conversion
+     * @return the converted test-data object
+     */
     public static <T> T read(String resourcePath, Class<T> dataType) {
         Objects.requireNonNull(dataType, "Test-data type must not be null.");
 
@@ -26,6 +41,15 @@ public class TestDataReader {
         }
     }
 
+    /**
+     * Reads one value from a top-level JSON key and converts it to the requested type.
+     *
+     * @param <T> the type returned after JSON conversion
+     * @param resourcePath the resource path relative to {@code src/test/resources}
+     * @param key the top-level JSON key to read
+     * @param dataType the Java type used for JSON conversion
+     * @return the converted value stored under the requested key
+     */
     public static <T> T readByKey(String resourcePath, String key, Class<T> dataType) {
         Objects.requireNonNull(key, "Test-data key must not be null.");
         Objects.requireNonNull(dataType, "Test-data type must not be null.");

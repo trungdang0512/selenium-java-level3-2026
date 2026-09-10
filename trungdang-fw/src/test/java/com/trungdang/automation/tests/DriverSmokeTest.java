@@ -5,12 +5,12 @@ import org.openqa.selenium.WebDriver;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-public class SmokeTest extends BaseTest {
+public class DriverSmokeTest extends BaseTest {
 
     private static final String URL_DATA_FILE = "test-data/url.json";
 
     @Test
-    public void shouldStartChromeAndOpenTestApplication() {
+    public void shouldStartChromeDriverAndOpenTestApplication() {
         String loginUrl = TestDataReader.readByKey(
                 URL_DATA_FILE,
                 "loginUrl",

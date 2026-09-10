@@ -32,16 +32,16 @@ If the project is already on your computer, open a terminal in the `trungdang-fw
 
 ### 3. Run the tests
 
-Chrome runs in headless mode by default:
+Chrome runs in a maximized visible window by default:
 
 ```powershell
 mvn test
 ```
 
-To watch the test run in a visible Chrome window:
+To run Chrome without opening a visible window:
 
 ```powershell
-mvn -Dheadless=false test
+mvn -Dheadless=true test
 ```
 
 ## Write a test
@@ -116,10 +116,10 @@ String loginUrl = TestDataReader.readByKey(
 
 Resource paths start inside `src/test/resources`; do not include that directory in the value passed to `TestDataReader`.
 
-Run the smoke test that opens this URL:
+Run the driver smoke test that starts Chrome and opens this URL:
 
 ```powershell
-mvn -Dheadless=true -Dtest=SmokeTest test
+mvn -Dheadless=true -Dtest=DriverSmokeTest test
 ```
 
 This test requires network access to `https://demo.testarchitect.com/`.
@@ -131,16 +131,16 @@ Pass configuration with Maven `-D` properties:
 | Property | Default | Supported values | Example |
 |---|---|---|---|
 | `browser` | `chrome` | `chrome` | `-Dbrowser=chrome` |
-| `headless` | `true` | `true`, `false` | `-Dheadless=false` |
+| `headless` | `false` | `true`, `false` | `-Dheadless=true` |
 
 Examples:
 
 ```powershell
-# Default Chrome configuration
+# Default maximized Chrome window
 mvn test
 
-# Visible Chrome window
-mvn -Dheadless=false test
+# Headless Chrome
+mvn -Dheadless=true test
 
 # Explicit browser and display settings
 mvn -Dbrowser=chrome -Dheadless=true test
@@ -185,7 +185,15 @@ Do not call `start(config)` twice on the same `DriverManager` without calling `q
 
 ### `WebDriverFactory`
 
-Creates the Selenium WebDriver requested by `DriverManager`. Test classes normally do not need to call this class directly.
+Selects the `BrowserProvider` requested by `DriverManager`. Test classes normally do not need to call this class directly.
+
+### `BrowserProvider`
+
+Defines the common method used to create a WebDriver from `FrameworkConfig`.
+
+### `ChromeProvider`
+
+Owns the Chrome-specific options and creates `ChromeDriver`. In visible mode, it maximizes the browser after startup. Headless mode uses Chrome's default viewport. Adding another browser later requires another provider instead of adding browser-specific creation code to `WebDriverFactory`.
 
 ### `BaseTest`
 
@@ -209,6 +217,8 @@ selenium-java-level3-2026/
         |   |   |-- ConfigManager.java
         |   |   `-- FrameworkConfig.java
         |   `-- driver/
+        |       |-- BrowserProvider.java
+        |       |-- ChromeProvider.java
         |       |-- DriverManager.java
         |       `-- WebDriverFactory.java
         `-- test/
@@ -217,7 +227,7 @@ selenium-java-level3-2026/
             |   |   `-- TestDataReader.java
             |   `-- tests/
             |       |-- BaseTest.java
-            |       `-- SmokeTest.java
+            |       `-- DriverSmokeTest.java
             `-- resources/test-data/
                 `-- url.json
 ```

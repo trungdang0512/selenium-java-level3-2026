@@ -31,7 +31,7 @@ public class ConfigManager {
     }
 
     private static boolean readHeadless() {
-        String value = System.getProperty(HEADLESS_PROPERTY, "true").trim();
+        String value = System.getProperty(HEADLESS_PROPERTY, "false").trim();
 
         if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
             throw new IllegalArgumentException(
