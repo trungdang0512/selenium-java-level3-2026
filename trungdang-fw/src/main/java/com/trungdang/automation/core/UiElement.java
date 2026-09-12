@@ -11,11 +11,18 @@ public class UiElement {
     private final WaitManager waitManager;
 
     public UiElement(WebDriver driver, By locator) {
-        this(driver, locator, WaitManager.DEFAULT_TIMEOUT);
+        this(new WaitManager(driver), locator);
     }
 
     public UiElement(WebDriver driver, By locator, Duration timeout) {
-        this.waitManager = new WaitManager(driver, timeout);
+        this(new WaitManager(driver, timeout), locator);
+    }
+
+    public UiElement(WaitManager waitManager, By locator) {
+        this.waitManager = Objects.requireNonNull(
+                waitManager,
+                "WaitManager must not be null."
+        );
         this.locator = WaitManager.requireLocator(locator);
     }
 

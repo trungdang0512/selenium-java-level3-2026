@@ -1,5 +1,6 @@
 package com.trungdang.automation.core;
 
+import com.trungdang.automation.config.ConfigManager;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -13,7 +14,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class WaitManager {
 
-    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+    public static final Duration DEFAULT_TIMEOUT = ConfigManager.load().getWaitTimeout();
 
     private final WebDriver driver;
     private final Duration timeout;
@@ -115,6 +116,28 @@ public class WaitManager {
         } catch (TimeoutException exception) {
             return false;
         }
+    }
+
+    /**
+     * Waits until a user-defined condition returns a non-null value or {@code true}.
+     *
+     * @param locator locator included in timeout details
+     * @param condition custom condition evaluated by Selenium
+     * @param <T> value returned when the condition succeeds
+     * @return the successful condition result
+     */
+    public <T> T waitFor(By locator, Function<WebDriver, T> condition) {
+        By checkedLocator = requireLocator(locator);
+        Function<WebDriver, T> checkedCondition = Objects.requireNonNull(
+                condition,
+                "Wait condition must not be null."
+        );
+
+        return waitUntil(
+                checkedLocator,
+                "match the custom condition",
+                checkedCondition
+        );
     }
 
     static By requireLocator(By locator) {

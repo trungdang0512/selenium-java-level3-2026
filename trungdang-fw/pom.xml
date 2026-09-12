@@ -32,6 +32,7 @@
         <browser>chrome</browser>
         <execution.mode>local</execution.mode>
         <headless>false</headless>
+        <wait.timeout.seconds>10</wait.timeout.seconds>
         <grid.url>http://localhost:4444</grid.url>
         <thread.count>3</thread.count>
     </properties>
@@ -112,6 +113,7 @@
                         <browser>${browser}</browser>
                         <execution.mode>${execution.mode}</execution.mode>
                         <headless>${headless}</headless>
+                        <wait.timeout.seconds>${wait.timeout.seconds}</wait.timeout.seconds>
                         <grid.url>${grid.url}</grid.url>
                         <allure.results.directory>
                             ${project.build.directory}/allure-results
