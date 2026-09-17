@@ -32,16 +32,16 @@ If the project is already on your computer, open a terminal in the `trungdang-fw
 
 ### 3. Run the tests
 
-Chrome runs in headless mode by default:
+Chrome runs in a maximized visible window by default:
 
 ```powershell
 mvn test
 ```
 
-To watch the test run in a visible Chrome window:
+To run Chrome without opening a visible window:
 
 ```powershell
-mvn -Dheadless=false test
+mvn -Dheadless=true test
 ```
 
 ## Write a test
@@ -95,39 +95,23 @@ Tests that extend `BaseTest` follow three steps:
 
 Extend `BaseTest` instead of repeating driver setup and cleanup in every test class.
 
-## Read JSON test data
+## Configure the application URL
 
-Test resources are stored under `trungdang-fw/src/test/resources/`. The smoke test reads its application URL from:
+The driver smoke test reads the application URL from `FrameworkConfig`. The default URL is:
 
 ```text
-src/test/resources/test-data/url.json
+https://demo.testarchitect.com/
 ```
 
-```json
-{
-  "loginUrl": "https://demo.testarchitect.com/"
-}
-```
-
-Read one JSON value by key:
-
-```java
-String loginUrl = TestDataReader.readByKey(
-        "test-data/url.json",
-        "loginUrl",
-        String.class
-);
-```
-
-Resource paths start inside `src/test/resources`; do not include that directory in the value passed to `TestDataReader`.
-
-Run the smoke test that opens this URL:
+Override it with the `base.url` system property:
 
 ```powershell
-mvn -Dheadless=true -Dtest=SmokeTest test
+mvn -Dbase.url=https://example.com -Dheadless=true -Dtest=DriverSmokeTest test
 ```
 
-This test requires network access to `https://demo.testarchitect.com/`.
+## Read typed JSON test data
+
+`TestDataReader.read()` uses Jackson to convert a complete JSON resource into the requested Java type. Resource paths are relative to `src/test/resources`.
 
 ## Configure the browser
 
@@ -136,20 +120,24 @@ Pass configuration with Maven `-D` properties:
 | Property | Default | Supported values | Example |
 |---|---|---|---|
 | `browser` | `chrome` | `chrome` | `-Dbrowser=chrome` |
-| `headless` | `true` | `true`, `false` | `-Dheadless=false` |
+| `headless` | `false` | `true`, `false` | `-Dheadless=true` |
+| `base.url` | `https://demo.testarchitect.com/` | Application URL | `-Dbase.url=https://example.com` |
 | `wait.timeout.seconds` | `10` | Any whole number greater than zero | `-Dwait.timeout.seconds=15` |
 
 Examples:
 
 ```powershell
-# Default Chrome configuration
+# Default maximized Chrome window
 mvn test
 
-# Visible Chrome window
-mvn -Dheadless=false test
+# Headless Chrome
+mvn -Dheadless=true test
 
 # Explicit browser and display settings
 mvn -Dbrowser=chrome -Dheadless=true test
+
+# Override the application URL
+mvn -Dbase.url=https://example.com test
 
 # Use a 15-second default wait timeout
 mvn -Dwait.timeout.seconds=15 test
@@ -169,11 +157,12 @@ FrameworkConfig config = ConfigManager.load();
 
 ### `FrameworkConfig`
 
-Stores the browser, headless setting, and default wait timeout:
+Stores the browser, display mode, application base URL, and default wait timeout:
 
 ```java
 config.getBrowser();
 config.isHeadless();
+config.getBaseUrl();
 config.getWaitTimeout();
 ```
 
@@ -195,15 +184,23 @@ Do not call `start(config)` twice on the same `DriverManager` without calling `q
 
 ### `WebDriverFactory`
 
-Creates the Selenium WebDriver requested by `DriverManager`. Test classes normally do not need to call this class directly.
+Selects the `BrowserProvider` requested by `DriverManager`. Test classes normally do not need to call this class directly.
+
+### `BrowserProvider`
+
+Defines the common method used to create a WebDriver from `FrameworkConfig`.
+
+### `ChromeProvider`
+
+Owns the Chrome-specific options and creates `ChromeDriver`. In visible mode, it maximizes the browser after startup. Headless mode uses Chrome's default viewport. Adding another browser later requires another provider instead of adding browser-specific creation code to `WebDriverFactory`.
 
 ### `BaseTest`
 
-Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()` inside test methods.
+Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()` or `getConfig()` inside test methods.
 
 ### `TestDataReader`
 
-Reads JSON files from `src/test/resources`. Use `readByKey()` for one value or `read()` to map the entire JSON file to a Java class.
+Reads complete JSON resources from `src/test/resources` and delegates typed deserialization to Jackson through `read()`.
 
 ### `UiElement`
 
@@ -300,6 +297,8 @@ selenium-java-level3-2026/
         |   |   |-- UiElement.java
         |   |   `-- WaitManager.java
         |   `-- driver/
+        |       |-- BrowserProvider.java
+        |       |-- ChromeProvider.java
         |       |-- DriverManager.java
         |       `-- WebDriverFactory.java
         `-- test/
@@ -308,9 +307,7 @@ selenium-java-level3-2026/
             |   |   `-- TestDataReader.java
             |   `-- tests/
             |       |-- BaseTest.java
-            |       `-- SmokeTest.java
-            `-- resources/test-data/
-                `-- url.json
+            |       `-- DriverSmokeTest.java
 ```
 
 ## Current browser support

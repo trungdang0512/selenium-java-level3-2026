@@ -7,13 +7,14 @@ import org.openqa.selenium.WebDriver;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 
-public abstract class BaseTest {
+public class BaseTest {
 
     private DriverManager driverManager;
+    private FrameworkConfig config;
 
     @BeforeMethod(alwaysRun = true)
     public void setUp() {
-        FrameworkConfig config = ConfigManager.load();
+        config = ConfigManager.load();
         driverManager = new DriverManager();
         driverManager.start(config);
     }
@@ -33,5 +34,16 @@ public abstract class BaseTest {
         }
 
         return driverManager.getDriver();
+    }
+
+    protected FrameworkConfig getConfig() {
+        if (config == null) {
+            throw new IllegalStateException(
+                    "FrameworkConfig is not initialized. "
+                            + "Test setup must run first."
+            );
+        }
+
+        return config;
     }
 }
