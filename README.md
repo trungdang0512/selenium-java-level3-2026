@@ -90,39 +90,23 @@ Tests that extend `BaseTest` follow three steps:
 
 Extend `BaseTest` instead of repeating driver setup and cleanup in every test class.
 
-## Read JSON test data
+## Configure the application URL
 
-Test resources are stored under `trungdang-fw/src/test/resources/`. The smoke test reads its application URL from:
+The driver smoke test reads the application URL from `FrameworkConfig`. The default URL is:
 
 ```text
-src/test/resources/test-data/url.json
+https://demo.testarchitect.com/
 ```
 
-```json
-{
-  "loginUrl": "https://demo.testarchitect.com/"
-}
-```
-
-Read one JSON value by key:
-
-```java
-String loginUrl = TestDataReader.readByKey(
-        "test-data/url.json",
-        "loginUrl",
-        String.class
-);
-```
-
-Resource paths start inside `src/test/resources`; do not include that directory in the value passed to `TestDataReader`.
-
-Run the driver smoke test that starts Chrome and opens this URL:
+Override it with the `base.url` system property:
 
 ```powershell
-mvn -Dheadless=true -Dtest=DriverSmokeTest test
+mvn -Dbase.url=https://example.com -Dheadless=true -Dtest=DriverSmokeTest test
 ```
 
-This test requires network access to `https://demo.testarchitect.com/`.
+## Read typed JSON test data
+
+`TestDataReader.read()` uses Jackson to convert a complete JSON resource into the requested Java type. Resource paths are relative to `src/test/resources`.
 
 ## Configure the browser
 
@@ -132,6 +116,7 @@ Pass configuration with Maven `-D` properties:
 |---|---|---|---|
 | `browser` | `chrome` | `chrome` | `-Dbrowser=chrome` |
 | `headless` | `false` | `true`, `false` | `-Dheadless=true` |
+| `base.url` | `https://demo.testarchitect.com/` | Application URL | `-Dbase.url=https://example.com` |
 
 Examples:
 
@@ -144,6 +129,9 @@ mvn -Dheadless=true test
 
 # Explicit browser and display settings
 mvn -Dbrowser=chrome -Dheadless=true test
+
+# Override the application URL
+mvn -Dbase.url=https://example.com test
 ```
 
 Invalid values fail before the browser starts. For example, `-Dheadless=yes` is rejected because the supported values are only `true` and `false`.
@@ -160,11 +148,12 @@ FrameworkConfig config = ConfigManager.load();
 
 ### `FrameworkConfig`
 
-Stores the browser selected for the test and whether it should run headlessly:
+Stores the browser, display mode, and application base URL resolved for the test:
 
 ```java
 config.getBrowser();
 config.isHeadless();
+config.getBaseUrl();
 ```
 
 ### `DriverManager`
@@ -197,11 +186,11 @@ Owns the Chrome-specific options and creates `ChromeDriver`. In visible mode, it
 
 ### `BaseTest`
 
-Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()` inside test methods.
+Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()` or `getConfig()` inside test methods.
 
 ### `TestDataReader`
 
-Reads JSON files from `src/test/resources`. Use `readByKey()` for one value or `read()` to map the entire JSON file to a Java class.
+Reads complete JSON resources from `src/test/resources` and delegates typed deserialization to Jackson through `read()`.
 
 ## Project structure
 
@@ -228,8 +217,6 @@ selenium-java-level3-2026/
             |   `-- tests/
             |       |-- BaseTest.java
             |       `-- DriverSmokeTest.java
-            `-- resources/test-data/
-                `-- url.json
 ```
 
 ## Current browser support
