@@ -2,7 +2,7 @@
 
 A simple Selenium WebDriver framework for writing TestNG UI tests with Java.
 
-The framework currently runs tests on local Google Chrome. It manages browser configuration, driver creation, driver cleanup, and JSON test-data loading so test classes can focus on test steps.
+The framework currently runs tests on local Google Chrome. It manages browser configuration, lifecycle, and JSON test-data loading. It also provides waited element actions and retries UI assertions while the page is changing.
 
 ## Quick start
 
@@ -57,8 +57,10 @@ Extend `BaseTest` to reuse the framework's TestNG browser lifecycle:
 ```java
 package com.trungdang.automation.tests;
 
+import com.trungdang.automation.core.UiAssertions;
+import com.trungdang.automation.core.UiElement;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class ExampleTest extends BaseTest {
@@ -66,10 +68,13 @@ public class ExampleTest extends BaseTest {
     @Test
     public void shouldOpenExamplePage() {
         WebDriver driver = getDriver();
-
         driver.get("https://example.com");
 
-        Assert.assertEquals(driver.getTitle(), "Example Domain");
+        UiElement heading = new UiElement(driver, By.tagName("h1"));
+        UiAssertions assertions = new UiAssertions(driver);
+
+        assertions.assertVisible(heading);
+        assertions.assertTextEquals(heading, "Example Domain");
     }
 }
 ```
@@ -117,6 +122,7 @@ Pass configuration with Maven `-D` properties:
 | `browser` | `chrome` | `chrome` | `-Dbrowser=chrome` |
 | `headless` | `false` | `true`, `false` | `-Dheadless=true` |
 | `base.url` | `https://demo.testarchitect.com/` | Application URL | `-Dbase.url=https://example.com` |
+| `wait.timeout.seconds` | `10` | Any whole number greater than zero | `-Dwait.timeout.seconds=15` |
 
 Examples:
 
@@ -132,9 +138,12 @@ mvn -Dbrowser=chrome -Dheadless=true test
 
 # Override the application URL
 mvn -Dbase.url=https://example.com test
+
+# Use a 15-second default wait timeout
+mvn -Dwait.timeout.seconds=15 test
 ```
 
-Invalid values fail before the browser starts. For example, `-Dheadless=yes` is rejected because the supported values are only `true` and `false`.
+Invalid values fail before the browser starts. For example, `-Dheadless=yes` is rejected because the supported values are only `true` and `false`. The wait timeout must be a whole number greater than zero.
 
 ## Framework API
 
@@ -148,12 +157,13 @@ FrameworkConfig config = ConfigManager.load();
 
 ### `FrameworkConfig`
 
-Stores the browser, display mode, and application base URL resolved for the test:
+Stores the browser, display mode, application base URL, and default wait timeout:
 
 ```java
 config.getBrowser();
 config.isHeadless();
 config.getBaseUrl();
+config.getWaitTimeout();
 ```
 
 ### `DriverManager`
@@ -192,6 +202,83 @@ Provides the TestNG setup and teardown shared by UI tests. Extend it and call `g
 
 Reads complete JSON resources from `src/test/resources` and delegates typed deserialization to Jackson through `read()`.
 
+### `UiElement`
+
+Stores a Selenium `By` locator and finds the element again when an action runs. This avoids keeping an old `WebElement` after the page changes.
+
+```java
+WaitManager waitManager = new WaitManager(driver);
+UiElement username = new UiElement(waitManager, By.id("username"));
+UiElement signInButton = new UiElement(waitManager, By.id("sign-in"));
+
+username.type("framework-user");
+signInButton.click();
+String buttonText = signInButton.getText();
+boolean buttonIsDisplayed = signInButton.isDisplayed();
+```
+
+`click()` waits for a displayed and enabled element. `type()` and `getText()` wait for a visible element. The default timeout comes from `wait.timeout.seconds`.
+
+Create one `WaitManager` and pass it to multiple elements when they use the same driver and timeout. The constructors that accept `WebDriver` remain available for simpler tests.
+
+### `UiAssertions`
+
+Retries an assertion until it passes or reaches the timeout:
+
+```java
+UiElement loadingIndicator = new UiElement(driver, By.id("loading"));
+UiElement message = new UiElement(driver, By.id("message"));
+UiAssertions assertions = new UiAssertions(driver);
+
+assertions.assertPresent(signInButton);
+assertions.assertVisible(signInButton);
+assertions.assertNotVisible(loadingIndicator);
+assertions.assertTextEquals(signInButton, "Sign in");
+assertions.assertTextContains(message, "Welcome");
+assertions.assertAttribute(signInButton, "type", "submit");
+
+assertions.assertThat(
+        message,
+        "to be visible with a success class",
+        element -> element.isDisplayed()
+                && element.getAttribute("class").contains("success")
+);
+```
+
+`assertPresent()` checks that an element exists in the DOM. `assertNotVisible()` passes when the element is absent or hidden. Use `assertThat()` for a custom element condition.
+
+A failed assertion reports the locator, expected condition, and timeout.
+
+### `WaitManager`
+
+Centralizes explicit waits and retries an element action when Selenium reports that the DOM replaced the element. Most tests use it indirectly through `UiElement`.
+
+Use `waitFor()` when the built-in waits do not cover a condition:
+
+```java
+By statusLocator = By.id("status");
+WaitManager waitManager = new WaitManager(driver);
+
+waitManager.waitFor(
+        statusLocator,
+        currentDriver -> currentDriver.findElement(statusLocator)
+                .getText()
+                .matches("READY|DONE")
+);
+```
+
+The condition must return `true` or a non-null value when it succeeds. Selenium keeps evaluating it until the configured timeout is reached.
+
+Use a custom timeout when a page needs a different wait time:
+
+```java
+UiElement message = new UiElement(
+        driver,
+        By.id("message"),
+        Duration.ofSeconds(5)
+);
+```
+
 ## Project structure
 
 ```text
@@ -205,6 +292,10 @@ selenium-java-level3-2026/
         |   |   |-- BrowserType.java
         |   |   |-- ConfigManager.java
         |   |   `-- FrameworkConfig.java
+        |   |-- core/
+        |   |   |-- UiAssertions.java
+        |   |   |-- UiElement.java
+        |   |   `-- WaitManager.java
         |   `-- driver/
         |       |-- BrowserProvider.java
         |       |-- ChromeProvider.java
