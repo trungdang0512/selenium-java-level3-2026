@@ -9,27 +9,40 @@ import org.testng.annotations.BeforeMethod;
 
 public class BaseTest {
 
-    private DriverManager driverManager;
-    private FrameworkConfig config;
+    private final ThreadLocal<DriverManager> driverManagers = new ThreadLocal<>();
+    private final ThreadLocal<FrameworkConfig> configs = new ThreadLocal<>();
 
     @BeforeMethod(alwaysRun = true)
     public void setUp() {
-        config = ConfigManager.load();
-        driverManager = new DriverManager();
+        FrameworkConfig config = ConfigManager.load();
+        DriverManager driverManager = new DriverManager();
+
+        configs.set(config);
+        driverManagers.set(driverManager);
         driverManager.start(config);
     }
 
     @AfterMethod(alwaysRun = true)
     public void tearDown() {
-        if (driverManager != null) {
-            driverManager.quit();
+        DriverManager driverManager = driverManagers.get();
+
+        try {
+            if (driverManager != null) {
+                driverManager.quit();
+            }
+        } finally {
+            driverManagers.remove();
+            configs.remove();
         }
     }
 
     protected WebDriver getDriver() {
+        DriverManager driverManager = driverManagers.get();
+
         if (driverManager == null) {
             throw new IllegalStateException(
-                    "DriverManager is not initialized. Test setup must run first."
+                    "DriverManager is not initialized for the current thread. "
+                            + "Test setup must run first."
             );
         }
 
@@ -37,9 +50,11 @@ public class BaseTest {
     }
 
     protected FrameworkConfig getConfig() {
+        FrameworkConfig config = configs.get();
+
         if (config == null) {
             throw new IllegalStateException(
-                    "FrameworkConfig is not initialized. "
+                    "FrameworkConfig is not initialized for the current thread. "
                             + "Test setup must run first."
             );
         }

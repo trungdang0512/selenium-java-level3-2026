@@ -10,15 +10,15 @@ public class WebDriverFactory {
     }
 
     public static WebDriver create(FrameworkConfig config) {
-        FrameworkConfig checkedConfig = Objects.requireNonNull(
+        Objects.requireNonNull(
                 config,
                 "Framework configuration must not be null."
         );
 
-        BrowserProvider provider = switch (checkedConfig.getBrowser()) {
+        BrowserProvider provider = switch (config.getBrowser()) {
             case CHROME -> new ChromeProvider();
         };
 
-        return provider.create(checkedConfig);
+        return provider.create(config);
     }
 }
