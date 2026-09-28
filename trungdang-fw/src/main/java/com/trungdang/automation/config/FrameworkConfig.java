@@ -8,10 +8,47 @@ import java.util.Objects;
  */
 public class FrameworkConfig {
 
+    private static final boolean DEFAULT_HEADLESS = false;
+    private static final String DEFAULT_BASE_URL = "https://demo.testarchitect.com/";
+    private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(10);
+
     private final BrowserType browser;
     private final boolean headless;
     private final String baseUrl;
     private final Duration waitTimeout;
+
+    /**
+     * Creates a configuration with the default headless mode, base URL, and wait timeout.
+     *
+     * @param browser browser used for the test
+     * @throws NullPointerException if browser is null
+     */
+    public FrameworkConfig(BrowserType browser) {
+        this(browser, DEFAULT_HEADLESS, DEFAULT_BASE_URL, DEFAULT_WAIT_TIMEOUT);
+    }
+
+    /**
+     * Creates a configuration with the default base URL and wait timeout.
+     *
+     * @param browser browser used for the test
+     * @param headless whether the browser runs without a visible window
+     * @throws NullPointerException if browser is null
+     */
+    public FrameworkConfig(BrowserType browser, boolean headless) {
+        this(browser, headless, DEFAULT_BASE_URL, DEFAULT_WAIT_TIMEOUT);
+    }
+
+    /**
+     * Creates a configuration with the default wait timeout.
+     *
+     * @param browser browser used for the test
+     * @param headless whether the browser runs without a visible window
+     * @param baseUrl application URL used by tests
+     * @throws NullPointerException if browser or baseUrl is null
+     */
+    public FrameworkConfig(BrowserType browser, boolean headless, String baseUrl) {
+        this(browser, headless, baseUrl, DEFAULT_WAIT_TIMEOUT);
+    }
 
     /**
      * Creates a configuration snapshot.
