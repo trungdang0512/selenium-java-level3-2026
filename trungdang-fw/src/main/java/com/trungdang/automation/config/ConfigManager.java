@@ -23,7 +23,7 @@ public class ConfigManager {
     private static final String BASE_URL_PROPERTY = "base.url";
     private static final String DEFAULT_BASE_URL = "https://demo.testarchitect.com/";
     private static final String WAIT_TIMEOUT_SECONDS_PROPERTY = "wait.timeout.seconds";
-    private static final long DEFAULT_WAIT_TIMEOUT_SECONDS = 10;
+    private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(10);
 
     private ConfigManager() {
     }
@@ -69,13 +69,14 @@ public class ConfigManager {
     }
 
     private static Duration readWaitTimeout() {
-        String value = System.getProperty(
-                WAIT_TIMEOUT_SECONDS_PROPERTY,
-                String.valueOf(DEFAULT_WAIT_TIMEOUT_SECONDS)
-        ).trim();
+        String value = System.getProperty(WAIT_TIMEOUT_SECONDS_PROPERTY);
+
+        if (value == null) {
+            return DEFAULT_WAIT_TIMEOUT;
+        }
 
         try {
-            long timeoutSeconds = Long.parseLong(value);
+            long timeoutSeconds = Long.parseLong(value.trim());
 
             if (timeoutSeconds <= 0) {
                 throw new IllegalArgumentException(

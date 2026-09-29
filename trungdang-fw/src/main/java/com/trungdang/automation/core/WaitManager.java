@@ -1,11 +1,12 @@
 package com.trungdang.automation.core;
 
-import com.trungdang.automation.config.ConfigManager;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.openqa.selenium.By;
+import org.openqa.selenium.ElementClickInterceptedException;
+import org.openqa.selenium.InvalidElementStateException;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
@@ -22,15 +23,15 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 public class WaitManager {
 
     /**
-     * Default timeout resolved from {@code wait.timeout.seconds} when this class loads.
+     * Default timeout used when callers do not supply one explicitly.
      */
-    public static final Duration DEFAULT_TIMEOUT = ConfigManager.load().getWaitTimeout();
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
 
     private final WebDriver driver;
     private final Duration timeout;
 
     /**
-     * Creates a manager that owns the configured default timeout.
+     * Creates a manager that owns the default timeout.
      *
      * @param driver driver used for every wait
      * @throws NullPointerException if driver is null
@@ -107,10 +108,49 @@ public class WaitManager {
     }
 
     /**
+     * Waits for a displayed and enabled element and executes an input action.
+     *
+     * <p>A transient invalid element state is retried until the action succeeds
+     * or the timeout expires. The element is located again on every attempt.
+     *
+     * @param locator locator evaluated on each poll
+     * @param action input action performed on the first interactable matching element
+     * @throws NullPointerException if locator or action is null
+     * @throws TimeoutException if the element does not become ready for the action in time
+     */
+    public void waitForInteractableAndExecute(By locator, Consumer<WebElement> action) {
+        By checkedLocator = requireLocator(locator);
+        Consumer<WebElement> checkedAction = Objects.requireNonNull(
+                action,
+                "Element action must not be null."
+        );
+
+        waitUntil(
+                checkedLocator,
+                "be ready for input and complete the action",
+                currentDriver -> {
+                    WebElement element = currentDriver.findElement(checkedLocator);
+
+                    if (!element.isDisplayed() || !element.isEnabled()) {
+                        return false;
+                    }
+
+                    try {
+                        checkedAction.accept(element);
+                        return true;
+                    } catch (InvalidElementStateException exception) {
+                        return false;
+                    }
+                }
+        );
+    }
+
+    /**
      * Waits for a visible element and returns a value produced from it.
      *
      * <p>The action may run more than once when a stale element causes a retry.
-     * Returning {@code null} continues waiting.
+     * Returning {@code null} continues waiting. Boolean {@code false} is returned
+     * as a valid value rather than being treated as an unsatisfied wait condition.
      *
      * @param locator locator evaluated on each poll
      * @param action function applied to the first visible matching element
@@ -126,7 +166,7 @@ public class WaitManager {
                 "Element action must not be null."
         );
 
-        return waitUntil(
+        WaitValue<T> result = waitUntil(
                 checkedLocator,
                 "be visible and return the requested value",
                 currentDriver -> {
@@ -136,15 +176,19 @@ public class WaitManager {
                         return null;
                     }
 
-                    return checkedAction.apply(element);
+                    T value = checkedAction.apply(element);
+                    return value == null ? null : new WaitValue<>(value);
                 }
         );
+
+        return result.value();
     }
 
     /**
      * Waits for a displayed and enabled element and executes an action inside the wait.
      *
-     * <p>The action may run more than once when a stale element causes a retry.
+     * <p>The action may run more than once when a stale element or temporary
+     * click interception causes a retry.
      *
      * @param locator locator evaluated on each poll
      * @param action action performed on the first clickable matching element
@@ -168,8 +212,12 @@ public class WaitManager {
                         return false;
                     }
 
-                    checkedAction.accept(element);
-                    return true;
+                    try {
+                        checkedAction.accept(element);
+                        return true;
+                    } catch (ElementClickInterceptedException exception) {
+                        return false;
+                    }
                 }
         );
     }
@@ -231,6 +279,9 @@ public class WaitManager {
         }
 
         return checkedTimeout;
+    }
+
+    private record WaitValue<T>(T value) {
     }
 
     private <T> T waitUntil(

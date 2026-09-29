@@ -16,7 +16,7 @@ public class UiElement {
     private final WaitManager waitManager;
 
     /**
-     * Creates an element with a new wait manager using the configured default timeout.
+     * Creates an element with a new wait manager using the framework default timeout.
      *
      * @param driver the driver used to locate the element
      * @param locator the locator that identifies the element
@@ -57,7 +57,8 @@ public class UiElement {
 
     /**
      * Clicks the first matching element after it becomes displayed and enabled.
-     * The element is located again when a stale-element failure is retried.
+     * The element is located again when a stale-element failure or temporary
+     * click interception is retried.
      *
      * @throws org.openqa.selenium.TimeoutException if the element does not become clickable
      */
@@ -66,17 +67,18 @@ public class UiElement {
     }
 
     /**
-     * Clears and types into the first matching visible element. The complete
-     * callback may run again if the element becomes stale during the operation.
+     * Clears and types into the first matching displayed and enabled element.
+     * The complete callback may run again if the element becomes stale or is
+     * temporarily not ready for input during the operation.
      *
      * @param text the text to enter
      * @throws NullPointerException if {@code text} is null
-     * @throws org.openqa.selenium.TimeoutException if the element does not become visible
+     * @throws org.openqa.selenium.TimeoutException if the element does not become ready for input
      */
     public void type(String text) {
         String checkedText = Objects.requireNonNull(text, "Text must not be null.");
 
-        waitManager.waitForVisibleAndExecute(
+        waitManager.waitForInteractableAndExecute(
                 locator,
                 element -> {
                     element.clear();

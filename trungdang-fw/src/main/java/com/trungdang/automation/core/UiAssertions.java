@@ -22,7 +22,7 @@ public class UiAssertions {
     private final Duration timeout;
 
     /**
-     * Creates assertions with the configured default timeout. This timeout is
+     * Creates assertions with the framework default timeout. This timeout is
      * owned by the assertion object and is independent of any {@link UiElement}
      * wait manager.
      *

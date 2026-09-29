@@ -70,8 +70,8 @@ public class ExampleTest extends BaseTest {
         WebDriver driver = getDriver();
         driver.get("https://example.com");
 
-        UiElement heading = new UiElement(driver, By.tagName("h1"));
-        UiAssertions assertions = new UiAssertions(driver);
+        UiElement heading = new UiElement(getWaitManager(), By.tagName("h1"));
+        UiAssertions assertions = getUiAssertions();
 
         assertions.assertVisible(heading);
         assertions.assertTextEquals(heading, "Example Domain");
@@ -196,7 +196,7 @@ Owns the Chrome-specific options and creates `ChromeDriver`. In visible mode, it
 
 ### `BaseTest`
 
-Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()` or `getConfig()` inside test methods.
+Provides the TestNG setup and teardown shared by UI tests. Extend it and call `getDriver()`, `getConfig()`, `getWaitManager()`, or `getUiAssertions()` inside test methods. The wait manager and UI assertions use `getConfig().getWaitTimeout()`.
 
 ### `TestDataReader`
 
@@ -207,7 +207,7 @@ Reads complete JSON resources from `src/test/resources` and delegates typed dese
 Stores a Selenium `By` locator and finds the element again when an action runs. This avoids keeping an old `WebElement` after the page changes.
 
 ```java
-WaitManager waitManager = new WaitManager(driver);
+WaitManager waitManager = getWaitManager();
 UiElement username = new UiElement(waitManager, By.id("username"));
 UiElement signInButton = new UiElement(waitManager, By.id("sign-in"));
 
@@ -217,7 +217,7 @@ String buttonText = signInButton.getText();
 boolean buttonIsDisplayed = signInButton.isDisplayed();
 ```
 
-`click()` waits for a displayed and enabled element. `type()` and `getText()` wait for a visible element. The default timeout comes from `wait.timeout.seconds`.
+`click()` waits for a displayed and enabled element. `type()` and `getText()` wait for a visible element. `BaseTest.getWaitManager()` uses the timeout resolved from `wait.timeout.seconds`.
 
 Create one `WaitManager` and pass it to multiple elements when they use the same driver and timeout. The constructors that accept `WebDriver` remain available for simpler tests.
 
@@ -226,9 +226,9 @@ Create one `WaitManager` and pass it to multiple elements when they use the same
 Retries an assertion until it passes or reaches the timeout:
 
 ```java
-UiElement loadingIndicator = new UiElement(driver, By.id("loading"));
-UiElement message = new UiElement(driver, By.id("message"));
-UiAssertions assertions = new UiAssertions(driver);
+UiElement loadingIndicator = new UiElement(getWaitManager(), By.id("loading"));
+UiElement message = new UiElement(getWaitManager(), By.id("message"));
+UiAssertions assertions = getUiAssertions();
 
 assertions.assertPresent(signInButton);
 assertions.assertVisible(signInButton);
@@ -257,7 +257,7 @@ Use `waitFor()` when the built-in waits do not cover a condition:
 
 ```java
 By statusLocator = By.id("status");
-WaitManager waitManager = new WaitManager(driver);
+WaitManager waitManager = getWaitManager();
 
 waitManager.waitFor(
         statusLocator,
