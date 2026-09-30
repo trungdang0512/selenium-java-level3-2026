@@ -2,6 +2,8 @@ package com.trungdang.automation.tests;
 
 import com.trungdang.automation.config.ConfigManager;
 import com.trungdang.automation.config.FrameworkConfig;
+import com.trungdang.automation.core.UiAssertions;
+import com.trungdang.automation.core.WaitManager;
 import com.trungdang.automation.driver.DriverManager;
 import org.openqa.selenium.WebDriver;
 import org.testng.annotations.AfterMethod;
@@ -11,6 +13,8 @@ public class BaseTest {
 
     private final ThreadLocal<DriverManager> driverManagers = new ThreadLocal<>();
     private final ThreadLocal<FrameworkConfig> configs = new ThreadLocal<>();
+    private final ThreadLocal<WaitManager> waitManagers = new ThreadLocal<>();
+    private final ThreadLocal<UiAssertions> uiAssertions = new ThreadLocal<>();
 
     @BeforeMethod(alwaysRun = true)
     public void setUp() {
@@ -20,6 +24,10 @@ public class BaseTest {
         configs.set(config);
         driverManagers.set(driverManager);
         driverManager.start(config);
+
+        WebDriver driver = driverManager.getDriver();
+        waitManagers.set(new WaitManager(driver, config.getWaitTimeout()));
+        uiAssertions.set(new UiAssertions(driver, config.getWaitTimeout()));
     }
 
     @AfterMethod(alwaysRun = true)
@@ -31,6 +39,8 @@ public class BaseTest {
                 driverManager.quit();
             }
         } finally {
+            uiAssertions.remove();
+            waitManagers.remove();
             driverManagers.remove();
             configs.remove();
         }
@@ -60,5 +70,31 @@ public class BaseTest {
         }
 
         return config;
+    }
+
+    protected WaitManager getWaitManager() {
+        WaitManager waitManager = waitManagers.get();
+
+        if (waitManager == null) {
+            throw new IllegalStateException(
+                    "WaitManager is not initialized for the current thread. "
+                            + "Test setup must run first."
+            );
+        }
+
+        return waitManager;
+    }
+
+    protected UiAssertions getUiAssertions() {
+        UiAssertions assertions = uiAssertions.get();
+
+        if (assertions == null) {
+            throw new IllegalStateException(
+                    "UiAssertions is not initialized for the current thread. "
+                            + "Test setup must run first."
+            );
+        }
+
+        return assertions;
     }
 }
