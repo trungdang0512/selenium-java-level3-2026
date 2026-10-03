@@ -1,7 +1,5 @@
 package com.trungdang.automation.config;
 
-import java.util.Locale;
-
 public class ConfigManager {
 
     private static final String BROWSER_PROPERTY = "browser";
@@ -13,24 +11,11 @@ public class ConfigManager {
     }
 
     public static FrameworkConfig load() {
-        BrowserType browser = readBrowser();
+        String browser = System.getProperty(BROWSER_PROPERTY, "chrome");
         boolean headless = readHeadless();
         String baseUrl = System.getProperty(BASE_URL_PROPERTY, DEFAULT_BASE_URL);
 
         return new FrameworkConfig(browser, headless, baseUrl);
-    }
-
-    private static BrowserType readBrowser() {
-        String value = System.getProperty(BROWSER_PROPERTY, "chrome");
-
-        try {
-            return BrowserType.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                    "System property 'browser' currently supports only: chrome.",
-                    exception
-            );
-        }
     }
 
     private static boolean readHeadless() {

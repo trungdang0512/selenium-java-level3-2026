@@ -1,5 +1,6 @@
 package com.trungdang.automation.config;
 
+import java.util.Locale;
 import java.util.Objects;
 
 public class FrameworkConfig {
@@ -7,25 +8,29 @@ public class FrameworkConfig {
     private static final boolean DEFAULT_HEADLESS = false;
     private static final String DEFAULT_BASE_URL = "https://demo.testarchitect.com/";
 
-    private final BrowserType browser;
+    private final String browser;
     private final boolean headless;
     private final String baseUrl;
 
-    public FrameworkConfig(BrowserType browser) {
+    public FrameworkConfig(String browser) {
         this(browser, DEFAULT_HEADLESS, DEFAULT_BASE_URL);
     }
 
-    public FrameworkConfig(BrowserType browser, boolean headless) {
+    public FrameworkConfig(String browser, boolean headless) {
         this(browser, headless, DEFAULT_BASE_URL);
     }
 
-    public FrameworkConfig(BrowserType browser, boolean headless, String baseUrl) {
-        this.browser = Objects.requireNonNull(browser, "Browser must not be null.");
+    public FrameworkConfig(String browser, boolean headless, String baseUrl) {
+        this.browser = Objects.requireNonNull(browser, "Browser must not be null.")
+                .trim().toLowerCase(Locale.ROOT);
+        if (this.browser.isEmpty()) {
+            throw new IllegalArgumentException("Browser must not be blank.");
+        }
         this.headless = headless;
         this.baseUrl = Objects.requireNonNull(baseUrl, "Base URL must not be null.");
     }
 
-    public BrowserType getBrowser() {
+    public String getBrowser() {
         return browser;
     }
 
