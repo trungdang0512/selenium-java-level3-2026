@@ -58,7 +58,8 @@ public class UiElement {
     /**
      * Clicks the first matching element after it becomes displayed and enabled.
      * The element is located again when a stale-element failure or temporary
-     * click interception is retried.
+     * click interception is retried. The first intercepted click attempts one scroll
+     * to the viewport center when the driver supports JavaScript.
      *
      * @throws org.openqa.selenium.TimeoutException if the element does not become clickable
      */

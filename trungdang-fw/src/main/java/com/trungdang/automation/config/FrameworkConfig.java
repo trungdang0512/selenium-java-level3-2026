@@ -2,6 +2,7 @@ package com.trungdang.automation.config;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Locale;
 
 /**
  * Stores the resolved settings used by one framework configuration snapshot.
@@ -12,7 +13,7 @@ public class FrameworkConfig {
     private static final String DEFAULT_BASE_URL = "https://demo.testarchitect.com/";
     private static final Duration DEFAULT_WAIT_TIMEOUT = Duration.ofSeconds(10);
 
-    private final BrowserType browser;
+    private final String browser;
     private final boolean headless;
     private final String baseUrl;
     private final Duration waitTimeout;
@@ -23,7 +24,7 @@ public class FrameworkConfig {
      * @param browser browser used for the test
      * @throws NullPointerException if browser is null
      */
-    public FrameworkConfig(BrowserType browser) {
+    public FrameworkConfig(String browser) {
         this(browser, DEFAULT_HEADLESS, DEFAULT_BASE_URL, DEFAULT_WAIT_TIMEOUT);
     }
 
@@ -34,7 +35,7 @@ public class FrameworkConfig {
      * @param headless whether the browser runs without a visible window
      * @throws NullPointerException if browser is null
      */
-    public FrameworkConfig(BrowserType browser, boolean headless) {
+    public FrameworkConfig(String browser, boolean headless) {
         this(browser, headless, DEFAULT_BASE_URL, DEFAULT_WAIT_TIMEOUT);
     }
 
@@ -46,7 +47,7 @@ public class FrameworkConfig {
      * @param baseUrl application URL used by tests
      * @throws NullPointerException if browser or baseUrl is null
      */
-    public FrameworkConfig(BrowserType browser, boolean headless, String baseUrl) {
+    public FrameworkConfig(String browser, boolean headless, String baseUrl) {
         this(browser, headless, baseUrl, DEFAULT_WAIT_TIMEOUT);
     }
 
@@ -58,15 +59,19 @@ public class FrameworkConfig {
      * @param baseUrl application URL used by tests
      * @param waitTimeout default timeout owned by waits created from this configuration
      * @throws NullPointerException if browser, baseUrl, or waitTimeout is null
-     * @throws IllegalArgumentException if waitTimeout is zero or negative
+     * @throws IllegalArgumentException if browser is blank or waitTimeout is zero or negative
      */
     public FrameworkConfig(
-            BrowserType browser,
+            String browser,
             boolean headless,
             String baseUrl,
             Duration waitTimeout
     ) {
-        this.browser = Objects.requireNonNull(browser, "Browser must not be null.");
+        this.browser = Objects.requireNonNull(browser, "Browser must not be null.")
+                .trim().toLowerCase(Locale.ROOT);
+        if (this.browser.isEmpty()) {
+            throw new IllegalArgumentException("Browser must not be blank.");
+        }
         this.headless = headless;
         this.baseUrl = Objects.requireNonNull(baseUrl, "Base URL must not be null.");
         this.waitTimeout = Objects.requireNonNull(waitTimeout, "Wait timeout must not be null.");
@@ -81,7 +86,7 @@ public class FrameworkConfig {
      *
      * @return configured browser
      */
-    public BrowserType getBrowser() {
+    public String getBrowser() {
         return browser;
     }
 

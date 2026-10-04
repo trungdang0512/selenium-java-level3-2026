@@ -1,14 +1,13 @@
 package com.trungdang.automation.config;
 
 import java.time.Duration;
-import java.util.Locale;
 
 /**
  * Resolves framework configuration from JVM system properties.
  *
  * <p>Supported properties are:
  * <ul>
- *   <li>{@code browser}: defaults to {@code chrome}; currently only Chrome is supported.</li>
+ *   <li>{@code browser}: defaults to {@code chrome}; selects a registered browser provider.</li>
  *   <li>{@code headless}: defaults to {@code false}; accepts {@code true} or {@code false}.</li>
  *   <li>{@code base.url}: defaults to {@code https://demo.testarchitect.com/} and is used
  *       as provided.</li>
@@ -35,25 +34,12 @@ public class ConfigManager {
      * @throws IllegalArgumentException if a supported property contains an invalid value
      */
     public static FrameworkConfig load() {
-        BrowserType browser = readBrowser();
+        String browser = System.getProperty(BROWSER_PROPERTY, "chrome");
         boolean headless = readHeadless();
         String baseUrl = System.getProperty(BASE_URL_PROPERTY, DEFAULT_BASE_URL);
         Duration waitTimeout = readWaitTimeout();
 
         return new FrameworkConfig(browser, headless, baseUrl, waitTimeout);
-    }
-
-    private static BrowserType readBrowser() {
-        String value = System.getProperty(BROWSER_PROPERTY, "chrome");
-
-        try {
-            return BrowserType.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                    "System property 'browser' currently supports only: chrome.",
-                    exception
-            );
-        }
     }
 
     private static boolean readHeadless() {

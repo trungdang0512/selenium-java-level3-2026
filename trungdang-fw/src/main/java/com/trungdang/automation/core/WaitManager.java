@@ -7,6 +7,7 @@ import java.util.function.Function;
 import org.openqa.selenium.By;
 import org.openqa.selenium.ElementClickInterceptedException;
 import org.openqa.selenium.InvalidElementStateException;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
@@ -188,7 +189,11 @@ public class WaitManager {
      * Waits for a displayed and enabled element and executes an action inside the wait.
      *
      * <p>The action may run more than once when a stale element or temporary
-     * click interception causes a retry.
+     * click interception causes a retry. On the first interception, a JavaScript-capable
+     * driver attempts to scroll the element to the viewport center once per invocation.
+     * The next poll locates the element again and retries the action within the same wait.
+     * Drivers without JavaScript support continue retrying without scrolling. A stale
+     * element during scrolling is retried; other script failures propagate to the caller.
      *
      * @param locator locator evaluated on each poll
      * @param action action performed on the first clickable matching element
@@ -205,18 +210,28 @@ public class WaitManager {
         waitUntil(
                 checkedLocator,
                 "be clickable and complete the action",
-                currentDriver -> {
-                    WebElement element = currentDriver.findElement(checkedLocator);
+                new Function<WebDriver, Boolean>() {
+                    private boolean scrollAttempted;
 
-                    if (!element.isDisplayed() || !element.isEnabled()) {
-                        return false;
-                    }
-
-                    try {
-                        checkedAction.accept(element);
-                        return true;
-                    } catch (ElementClickInterceptedException exception) {
-                        return false;
+                    @Override
+                    public Boolean apply(WebDriver currentDriver) {
+                        WebElement element = currentDriver.findElement(checkedLocator);
+                        if (!element.isDisplayed() || !element.isEnabled()) {
+                            return false;
+                        }
+                        try {
+                            checkedAction.accept(element);
+                            return true;
+                        } catch (ElementClickInterceptedException exception) {
+                            if (!scrollAttempted && currentDriver instanceof JavascriptExecutor executor) {
+                                scrollAttempted = true;
+                                executor.executeScript(
+                                        "arguments[0].scrollIntoView({block: 'center', inline: 'center', behavior: 'instant'});",
+                                        element
+                                );
+                            }
+                            return false;
+                        }
                     }
                 }
         );

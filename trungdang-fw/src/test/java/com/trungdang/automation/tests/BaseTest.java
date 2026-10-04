@@ -9,92 +9,48 @@ import org.openqa.selenium.WebDriver;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 
+/** Optional TestNG lifecycle adapter with convenience access to the current session. */
 public class BaseTest {
 
-    private final ThreadLocal<DriverManager> driverManagers = new ThreadLocal<>();
-    private final ThreadLocal<FrameworkConfig> configs = new ThreadLocal<>();
-    private final ThreadLocal<WaitManager> waitManagers = new ThreadLocal<>();
-    private final ThreadLocal<UiAssertions> uiAssertions = new ThreadLocal<>();
+    private final DriverManager driverManager = new DriverManager();
 
     @BeforeMethod(alwaysRun = true)
     public void setUp() {
-        FrameworkConfig config = ConfigManager.load();
-        DriverManager driverManager = new DriverManager();
-
-        configs.set(config);
-        driverManagers.set(driverManager);
-        driverManager.start(config);
-
-        WebDriver driver = driverManager.getDriver();
-        waitManagers.set(new WaitManager(driver, config.getWaitTimeout()));
-        uiAssertions.set(new UiAssertions(driver, config.getWaitTimeout()));
+        driverManager.start(ConfigManager.load());
     }
 
     @AfterMethod(alwaysRun = true)
     public void tearDown() {
-        DriverManager driverManager = driverManagers.get();
-
-        try {
-            if (driverManager != null) {
-                driverManager.quit();
-            }
-        } finally {
-            uiAssertions.remove();
-            waitManagers.remove();
-            driverManagers.remove();
-            configs.remove();
-        }
+        driverManager.quit();
     }
 
     protected WebDriver getDriver() {
-        DriverManager driverManager = driverManagers.get();
-
-        if (driverManager == null) {
-            throw new IllegalStateException(
-                    "DriverManager is not initialized for the current thread. "
-                            + "Test setup must run first."
-            );
-        }
-
         return driverManager.getDriver();
     }
 
     protected FrameworkConfig getConfig() {
-        FrameworkConfig config = configs.get();
-
-        if (config == null) {
-            throw new IllegalStateException(
-                    "FrameworkConfig is not initialized for the current thread. "
-                            + "Test setup must run first."
-            );
-        }
-
-        return config;
+        return driverManager.getConfig();
     }
 
+    /**
+     * Creates a new wait manager for the current thread's driver and configured timeout.
+     * Retain the returned instance locally when several elements should share it.
+     *
+     * @return a wait manager bound to the current session
+     * @throws IllegalStateException if no browser is running on the current thread
+     */
     protected WaitManager getWaitManager() {
-        WaitManager waitManager = waitManagers.get();
-
-        if (waitManager == null) {
-            throw new IllegalStateException(
-                    "WaitManager is not initialized for the current thread. "
-                            + "Test setup must run first."
-            );
-        }
-
-        return waitManager;
+        return new WaitManager(getDriver(), getConfig().getWaitTimeout());
     }
 
+    /**
+     * Creates new assertions for the current thread's driver and configured timeout.
+     * The returned instance must not be reused after the browser session ends.
+     *
+     * @return assertions bound to the current session
+     * @throws IllegalStateException if no browser is running on the current thread
+     */
     protected UiAssertions getUiAssertions() {
-        UiAssertions assertions = uiAssertions.get();
-
-        if (assertions == null) {
-            throw new IllegalStateException(
-                    "UiAssertions is not initialized for the current thread. "
-                            + "Test setup must run first."
-            );
-        }
-
-        return assertions;
+        return new UiAssertions(getDriver(), getConfig().getWaitTimeout());
     }
 }
